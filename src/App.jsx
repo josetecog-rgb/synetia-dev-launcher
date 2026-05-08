@@ -916,6 +916,18 @@ Responde SOLO con el prompt mejorado, listo para copiar y pegar al agente IA. Si
           <div>
             <SectionTitle>DEFINE TU PROYECTO</SectionTitle>
 
+            {/* Guia de ayuda */}
+            <div style={{ background: "#0D1117", border: "1px solid #1D4ED844", borderRadius: "8px", padding: "14px 16px", marginBottom: "20px" }}>
+              <div style={{ color: "#60A5FA", fontSize: "11px", fontWeight: "bold", marginBottom: "8px", letterSpacing: "0.1em" }}>
+                💡 ¿CÓMO COMPLETAR ESTE PASO?
+              </div>
+              <div style={{ color: "#6B7280", fontSize: "11px", lineHeight: "1.9" }}>
+                Mientras más detalle pongas aquí, la IA no necesitará preguntarte nada y arrancará a construir sola.<br/>
+                <strong style={{ color: "#9CA3AF" }}>El objetivo:</strong> que al leer tu idea, la IA sepa exactamente qué construir, para quién, con qué tecnología y qué NO hacer.<br/>
+                <strong style={{ color: "#21C55D" }}>Tip:</strong> Usa el botón <strong>"⚡ Mejorar idea con IA"</strong> — Gemini convierte tu idea básica en un prompt profesional completo y listo.
+              </div>
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
               {/* Nombre */}
               <div>
@@ -923,7 +935,7 @@ Responde SOLO con el prompt mejorado, listo para copiar y pegar al agente IA. Si
                 <input
                   value={projectName}
                   onChange={e => setProjectName(e.target.value)}
-                  placeholder="Ej: OdontoEsthetic Dashboard"
+                  placeholder="Ej: AURA — Museo de Recuerdos"
                   style={{ ...inputStyle, width: "100%", fontSize: "14px", padding: "10px 14px" }}
                 />
               </div>
@@ -944,14 +956,47 @@ Responde SOLO con el prompt mejorado, listo para copiar y pegar al agente IA. Si
               </div>
             </div>
 
+            {/* Ejemplo de idea bien escrita */}
+            <div style={{ marginTop: "16px", background: "#0D1117", border: "1px solid #21C55D22", borderRadius: "8px", padding: "14px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <div style={{ color: "#21C55D", fontSize: "11px", fontWeight: "bold" }}>📋 EJEMPLO — así debe quedar tu idea para que la IA no pregunte nada</div>
+                <button
+                  onClick={() => setRawIdea("Quiero una landing page de una sola pagina para AURA, un servicio de lujo que usa IA y Realidad Virtual para preservar recuerdos de personas fallecidas. Cliente objetivo: familias de clase alta en LATAM. Secciones: Hero con efecto de particulas, Que es AURA, Como funciona (3 pasos), Testimonios, Precios (3 planes), Formulario de contacto. Estetica: premium, oscura, elegante, tipografia serif. Stack: HTML + CSS + JavaScript vanilla, sin frameworks, sin backend. Una sola pagina, responsive para movil. Colores: negro, dorado y blanco. NO usar React ni Vue.")}
+                  style={{ padding: "4px 10px", background: "#21C55D22", color: "#21C55D", border: "1px solid #21C55D44", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                >
+                  Usar este ejemplo
+                </button>
+              </div>
+              <div style={{ color: "#374151", fontSize: "11px", lineHeight: "1.8", fontStyle: "italic", background: "#161B22", padding: "10px 12px", borderRadius: "6px" }}>
+                "Quiero una landing page de una sola pagina para AURA, un servicio de lujo que usa IA y Realidad Virtual para preservar recuerdos de personas fallecidas. Cliente objetivo: familias de clase alta en LATAM. Secciones: Hero con efecto de particulas, Que es AURA, Como funciona (3 pasos), Testimonios, Precios (3 planes), Formulario de contacto. Estetica: premium, oscura, elegante. Stack: HTML + CSS + JavaScript vanilla, sin frameworks, sin backend. Una sola pagina, responsive. NO usar React ni Vue."
+              </div>
+            </div>
+
+            {/* Checklist de que incluir */}
+            <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              {[
+                ["✅ Qué construir", "Landing / dashboard / app / bot / API..."],
+                ["✅ Para quién", "Clínicas / familias / empresas LATAM..."],
+                ["✅ Stack tecnológico", "HTML+CSS / React / Next.js / n8n..."],
+                ["✅ Secciones o funciones", "Hero, precios, formulario / login..."],
+                ["✅ Estética deseada", "Oscura y premium / minimalista / colorida..."],
+                ["❌ Qué NO debe hacer", "Sin backend / sin DB / solo MVP..."],
+              ].map(([k, v]) => (
+                <div key={k} style={{ background: "#0D1117", border: "1px solid #21262D", borderRadius: "6px", padding: "8px 12px" }}>
+                  <div style={{ color: k.startsWith("✅") ? "#21C55D" : "#F87171", fontSize: "10px", fontWeight: "bold" }}>{k}</div>
+                  <div style={{ color: "#4B5563", fontSize: "10px", marginTop: "2px" }}>{v}</div>
+                </div>
+              ))}
+            </div>
+
             {/* Idea */}
-            <div style={{ marginTop: "20px" }}>
-              <Label>TU IDEA (resumen breve)</Label>
+            <div style={{ marginTop: "16px" }}>
+              <Label>TU IDEA — escríbela con todo el detalle posible</Label>
               <textarea
                 value={rawIdea}
                 onChange={e => setRawIdea(e.target.value)}
-                placeholder="Describe tu idea en 2-3 líneas. Qué quieres construir, para quién y cuál es el problema que resuelve..."
-                style={{ ...inputStyle, width: "100%", minHeight: "80px", resize: "vertical" }}
+                placeholder={"Describe tu proyecto con el máximo detalle. Incluye:\n- ¿Qué es? (landing / app / dashboard / bot)\n- ¿Para quién? (cliente objetivo)\n- ¿Qué secciones o funciones debe tener?\n- ¿Qué tecnología usar? (React, HTML, n8n, etc.)\n- ¿Qué estética? (oscura, moderna, minimalista)\n- ¿Qué NO debe hacer? (sin backend, solo MVP, etc.)\n\nMientras más detalle, la IA construirá sin hacer preguntas."}
+                style={{ ...inputStyle, width: "100%", minHeight: "150px", resize: "vertical", lineHeight: "1.7" }}
               />
 
               {/* API Key para mejorar idea */}
