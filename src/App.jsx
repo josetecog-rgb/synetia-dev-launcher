@@ -1387,21 +1387,164 @@ Responde SOLO con el prompt mejorado, listo para copiar y pegar al agente IA. Si
                   {generatedScript}
                 </pre>
 
-                {/* Instrucciones de uso */}
-                <div style={{ marginTop: "20px", background: "#0D1117", border: "1px solid #F59E0B33", borderRadius: "8px", padding: "16px" }}>
-                  <div style={{ color: "#F59E0B", marginBottom: "10px", fontSize: "12px", fontWeight: "bold" }}>
-                    🔴 INSTRUCCIONES DE USO
+                {/* Instrucciones de uso detalladas */}
+                <div style={{ marginTop: "20px", background: "#0D1117", border: "1px solid #F59E0B33", borderRadius: "8px", padding: "20px" }}>
+                  <div style={{ color: "#F59E0B", marginBottom: "16px", fontSize: "13px", fontWeight: "bold", letterSpacing: "0.1em" }}>
+                    🔴 INSTRUCCIONES COMPLETAS — PASO A PASO
                   </div>
-                  <ol style={{ color: "#9CA3AF", fontSize: "12px", lineHeight: "2", paddingLeft: "20px", margin: 0 }}>
-                    <li>Descarga el archivo <code style={{ color: "#21C55D" }}>setup.js</code></li>
-                    <li>Colócalo en la carpeta donde quieres crear tu proyecto</li>
-                    <li>Abre una terminal (PowerShell en Windows) en esa carpeta</li>
-                    <li>Ejecuta: <code style={{ color: "#21C55D", background: "#161B22", padding: "2px 6px", borderRadius: "3px" }}>node setup.js</code></li>
-                    <li>Sigue las instrucciones <code style={{ color: "#F59E0B" }}>🔴 ACCIÓN MANUAL</code> que aparezcan</li>
-                    <li>Abre tu entorno ({env?.name}) en esa carpeta</li>
-                  </ol>
-                  <div style={{ marginTop: "12px", color: "#4B5563", fontSize: "11px" }}>
-                    Requisito: Node.js 18+ instalado. Verifica con: <code style={{ color: "#21C55D" }}>node --version</code>
+
+                  {/* Paso 1 */}
+                  <div style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px solid #21262D" }}>
+                    <div style={{ color: "#21C55D", fontWeight: "bold", fontSize: "12px", marginBottom: "6px" }}>
+                      PASO 1 — Descarga el setup.js
+                    </div>
+                    <div style={{ color: "#9CA3AF", fontSize: "12px", lineHeight: "1.8" }}>
+                      Haz clic en el botón verde <strong style={{ color: "#21C55D" }}>"Descargar setup.js"</strong> que está arriba.<br/>
+                      El archivo se descargará a tu carpeta de <strong>Descargas</strong>.
+                    </div>
+                  </div>
+
+                  {/* Paso 2 */}
+                  <div style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px solid #21262D" }}>
+                    <div style={{ color: "#21C55D", fontWeight: "bold", fontSize: "12px", marginBottom: "6px" }}>
+                      PASO 2 — Crea una carpeta nueva para tu proyecto
+                    </div>
+                    <div style={{ color: "#9CA3AF", fontSize: "12px", lineHeight: "1.8" }}>
+                      Crea una carpeta nueva donde quieras guardar el proyecto. Por ejemplo:<br/>
+                      <code style={{ color: "#21C55D", background: "#161B22", padding: "3px 8px", borderRadius: "3px", display: "inline-block", marginTop: "4px" }}>
+                        E:\MisProyectos\{projectName || "NombreDetuProyecto"}
+                      </code>
+                    </div>
+                  </div>
+
+                  {/* Paso 3 */}
+                  <div style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px solid #21262D" }}>
+                    <div style={{ color: "#21C55D", fontWeight: "bold", fontSize: "12px", marginBottom: "6px" }}>
+                      PASO 3 — Mueve el setup.js a esa carpeta
+                    </div>
+                    <div style={{ color: "#9CA3AF", fontSize: "12px", lineHeight: "1.8" }}>
+                      Ve a tu carpeta de <strong>Descargas</strong>, copia el archivo <strong style={{ color: "#21C55D" }}>setup.js</strong> y pégalo dentro de la carpeta que creaste en el paso 2.
+                    </div>
+                  </div>
+
+                  {/* Paso 4 */}
+                  <div style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px solid #21262D" }}>
+                    <div style={{ color: "#21C55D", fontWeight: "bold", fontSize: "12px", marginBottom: "6px" }}>
+                      PASO 4 — Abre PowerShell en esa carpeta
+                    </div>
+                    <div style={{ color: "#9CA3AF", fontSize: "12px", lineHeight: "1.8" }}>
+                      Abre la carpeta en el Explorador de Windows.<br/>
+                      Haz <strong>clic derecho</strong> dentro de la carpeta → selecciona <strong>"Abrir en Terminal"</strong> o <strong>"Abrir PowerShell aquí"</strong>.<br/>
+                      <span style={{ color: "#6B7280", fontSize: "11px" }}>Si no aparece esa opción: abre PowerShell, escribe <code style={{ color: "#21C55D" }}>cd "</code> y arrastra la carpeta dentro de la ventana.</span>
+                    </div>
+                  </div>
+
+                  {/* Paso 5 */}
+                  <div style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px solid #21262D" }}>
+                    <div style={{ color: "#21C55D", fontWeight: "bold", fontSize: "12px", marginBottom: "6px" }}>
+                      PASO 5 — Ejecuta el setup
+                    </div>
+                    <div style={{ color: "#9CA3AF", fontSize: "12px", lineHeight: "1.8" }}>
+                      En la terminal escribe exactamente esto y presiona <strong>Enter</strong>:
+                    </div>
+                    <div style={{ background: "#161B22", border: "1px solid #30363D", borderRadius: "6px", padding: "10px 14px", marginTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <code style={{ color: "#21C55D", fontSize: "14px" }}>node setup.js</code>
+                      <button
+                        onClick={() => navigator.clipboard.writeText("node setup.js")}
+                        style={{ ...btnStyle, fontSize: "10px", background: "#21262D", color: "#6B7280", border: "1px solid #30363D" }}
+                      >
+                        📋 Copiar
+                      </button>
+                    </div>
+                    <div style={{ color: "#6B7280", fontSize: "11px", marginTop: "6px" }}>
+                      Verás mensajes con ✓ verdes — eso significa que se están creando los archivos.
+                    </div>
+                  </div>
+
+                  {/* Paso 6 — específico por entorno */}
+                  <div style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px solid #21262D" }}>
+                    <div style={{ color: "#21C55D", fontWeight: "bold", fontSize: "12px", marginBottom: "6px" }}>
+                      PASO 6 — Abre tu entorno: {env?.name}
+                    </div>
+                    <div style={{ color: "#9CA3AF", fontSize: "12px", lineHeight: "1.8" }}>
+                      {env?.id === "claude-code" && <>
+                        En PowerShell, dentro de la misma carpeta, escribe:<br/>
+                        <code style={{ color: "#21C55D", background: "#161B22", padding: "3px 8px", borderRadius: "3px" }}>claude</code><br/>
+                        Claude Code abrirá y ya tendrá todo el contexto de tu proyecto en CLAUDE.md.
+                      </>}
+                      {env?.id === "antigravity" && <>
+                        Abre la app Antigravity → <strong>File → Open Folder</strong> → selecciona la carpeta del proyecto.<br/>
+                        Antigravity leerá automáticamente el archivo AGENTS.md con tus instrucciones.
+                      </>}
+                      {env?.id === "opencode" && <>
+                        En PowerShell, dentro de la misma carpeta, escribe:<br/>
+                        <code style={{ color: "#21C55D", background: "#161B22", padding: "3px 8px", borderRadius: "3px" }}>opencode</code><br/>
+                        Opencode abrirá y leerá el AGENTS.md con el contexto de tu proyecto.
+                      </>}
+                      {env?.id === "codex-cli" && <>
+                        En PowerShell, dentro de la misma carpeta, escribe:<br/>
+                        <code style={{ color: "#21C55D", background: "#161B22", padding: "3px 8px", borderRadius: "3px" }}>codex</code><br/>
+                        Codex CLI abrirá y leerá el AGENTS.md automáticamente.
+                      </>}
+                      {env?.id === "gemini-cli" && <>
+                        En PowerShell, dentro de la misma carpeta, escribe:<br/>
+                        <code style={{ color: "#21C55D", background: "#161B22", padding: "3px 8px", borderRadius: "3px" }}>gemini</code><br/>
+                        Gemini CLI abrirá y leerá el GEMINI.md con el contexto de tu proyecto.
+                      </>}
+                      {env?.id?.startsWith("vscode-") && <>
+                        En PowerShell, escribe este comando para abrir VS Code directamente en tu proyecto:<br/>
+                        <div style={{ background: "#161B22", border: "1px solid #30363D", borderRadius: "6px", padding: "10px 14px", marginTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <code style={{ color: "#21C55D", fontSize: "13px" }}>code .</code>
+                          <button
+                            onClick={() => navigator.clipboard.writeText("code .")}
+                            style={{ ...btnStyle, fontSize: "10px", background: "#21262D", color: "#6B7280", border: "1px solid #30363D" }}
+                          >
+                            📋 Copiar
+                          </button>
+                        </div>
+                        <div style={{ marginTop: "8px", color: "#9CA3AF", fontSize: "12px" }}>
+                          VS Code abrirá con la carpeta ya configurada.
+                        </div>
+                      </>}
+                    </div>
+                  </div>
+
+                  {/* Paso 7 — decirle a la IA qué hacer */}
+                  <div style={{ marginBottom: "8px" }}>
+                    <div style={{ color: "#21C55D", fontWeight: "bold", fontSize: "12px", marginBottom: "6px" }}>
+                      PASO 7 — Dile a la IA que construya tu proyecto
+                    </div>
+                    <div style={{ color: "#9CA3AF", fontSize: "12px", lineHeight: "1.8", marginBottom: "8px" }}>
+                      Una vez abierto tu entorno, copia y pega este mensaje exacto en el chat de la IA:
+                    </div>
+                    <div style={{ background: "#0A1628", border: "1px solid #1D4ED844", borderRadius: "6px", padding: "12px 14px" }}>
+                      <div style={{ color: "#60A5FA", fontSize: "11px", marginBottom: "6px" }}>MENSAJE PARA COPIAR Y PEGAR EN LA IA:</div>
+                      <div style={{ color: "#E2E8F0", fontSize: "12px", lineHeight: "1.8", fontStyle: "italic" }}>
+                        {env?.id === "claude-code" || env?.id === "opencode" || env?.id === "codex-cli" || env?.id === "antigravity" || env?.id === "gemini-cli"
+                          ? `Lee el archivo ${env?.instructionsFile || "AGENTS.md"} y construye el proyecto según esas instrucciones. Empieza por la estructura base y dime qué vas a hacer antes de comenzar.`
+                          : `Lee el archivo ${env?.instructionsFile || ".github/copilot-instructions.md"} y construye el proyecto según esas instrucciones. Empieza por la estructura base y dime qué vas a hacer antes de comenzar.`
+                        }
+                      </div>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(
+                          env?.id === "claude-code" || env?.id === "opencode" || env?.id === "codex-cli" || env?.id === "antigravity" || env?.id === "gemini-cli"
+                            ? `Lee el archivo ${env?.instructionsFile || "AGENTS.md"} y construye el proyecto según esas instrucciones. Empieza por la estructura base y dime qué vas a hacer antes de comenzar.`
+                            : `Lee el archivo ${env?.instructionsFile || ".github/copilot-instructions.md"} y construye el proyecto según esas instrucciones. Empieza por la estructura base y dime qué vas a hacer antes de comenzar.`
+                        )}
+                        style={{ ...btnStyle, marginTop: "10px", background: "#1D4ED8", color: "#fff", fontSize: "11px", border: "none" }}
+                      >
+                        📋 Copiar mensaje para la IA
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Requisito Node */}
+                  <div style={{ marginTop: "16px", background: "#161B22", borderRadius: "6px", padding: "10px 14px" }}>
+                    <div style={{ color: "#6B7280", fontSize: "11px" }}>
+                      ⚙️ <strong style={{ color: "#9CA3AF" }}>Requisito:</strong> Node.js 18+ instalado.
+                      Verifica abriendo PowerShell y escribiendo: <code style={{ color: "#21C55D" }}>node --version</code><br/>
+                      Si dice "comando no reconocido", descarga Node.js desde: <a href="https://nodejs.org" target="_blank" rel="noreferrer" style={{ color: "#1D4ED8" }}>nodejs.org</a> → botón LTS
+                    </div>
                   </div>
                 </div>
               </div>
