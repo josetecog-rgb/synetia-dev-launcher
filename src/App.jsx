@@ -216,7 +216,7 @@ export default function DevLauncher() {
   const [improvedIdea, setImprovedIdea] = useState("");
   const [editedIdea, setEditedIdea] = useState("");
   const [isImprovingIdea, setIsImprovingIdea] = useState(false);
-  const [ideaApiKey, setIdeaApiKey] = useState("");
+  const [ideaApiKey, setIdeaApiKey] = useState(() => { try { return localStorage.getItem("synetia_gemini_key") || ""; } catch(e) { return ""; } });
   const [selectedMcps, setSelectedMcps] = useState([]);
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [rules, setRules] = useState(DEFAULT_RULES);
@@ -260,7 +260,7 @@ export default function DevLauncher() {
       if (!key) { const m = "⚠️ Necesitas tu API key de Google AI Studio (gratis en aistudio.google.com)"; setImprovedIdea(m); setEditedIdea(m); setIsImprovingIdea(false); return; }
       const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: "Eres experto en product design. Convierte esta idea en un prompt técnico completo para un agente IA coding.\n\nIDEA: " + rawIdea + "\nPROYECTO: " + (projectName || "Sin nombre") + " | TIPO: " + (PROJECT_TYPES.find(p => p.id === projectType)?.label || "General") + " | ENTORNO: " + (env?.name || "No seleccionado") + "\n\nIncluye: 1) Descripción del proyecto 2) Para quién es 3) Stack tecnológico 4) Funcionalidades/secciones 5) Estética 6) Lo que NO debe hacer. Responde SOLO el prompt listo para copiar y pegar." }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 1500 } })
+        body: JSON.stringify({ contents: [{ parts: [{ text: "Eres un experto en arquitectura de software y product design. Tu tarea es convertir la idea del usuario en un prompt de especificación COMPLETO y DETALLADO para un agente IA coding. El prompt debe ser tan claro que el agente pueda construir el proyecto SIN hacer ninguna pregunta.\n\nDATA DEL PROYECTO:\n- Nombre: " + (projectName || "Sin nombre") + "\n- Tipo: " + (PROJECT_TYPES.find(p => p.id === projectType)?.label || "General") + "\n- Entorno: " + (env?.name || "No seleccionado") + "\n- Plantilla base: " + (selectedTemplate?.name || "Ninguna") + "\n\nIDEA DEL USUARIO:\n" + rawIdea + "\n\nGenera el prompt con TODAS estas secciones completas:\n1. DESCRIPCION DEL PROYECTO (qué es, para quién, problema que resuelve)\n2. STACK TECNOLOGICO (lenguajes, frameworks, librerías exactas)\n3. ESTRUCTURA DE ARCHIVOS (lista de archivos a crear)\n4. SECCIONES / PANTALLAS (descripción detallada de cada una)\n5. ESTÉTICA Y DISEÑO (colores exactos, tipografías, efectos visuales)\n6. FUNCIONALIDADES (lista completa)\n7. LO QUE NO DEBE HACER (límites del MVP)\n8. INSTRUCCIONES FINALES (cómo debe trabajar la IA)\n\nIMPORTANTE: Responde ÚNICAMENTE con el prompt completo, sin introducción ni explicaciones previas. Empieza directamente con el prompt. No uses markdown, solo texto plano organizado en secciones." }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } })
       });
       const data = await res.json();
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Error al procesar.";
@@ -548,7 +548,7 @@ export default function DevLauncher() {
               <div style={{ display: "flex", gap: "10px", marginTop: "10px", alignItems: "flex-end" }}>
                 <div style={{ flex: 1 }}>
                   <Lbl>GEMINI API KEY (gratis en aistudio.google.com)</Lbl>
-                  <input value={ideaApiKey} onChange={e => setIdeaApiKey(e.target.value)} placeholder="AIzaSy..." type="password" style={{ ...IS, width: "100%" }} />
+                  <input value={ideaApiKey} onChange={e => { setIdeaApiKey(e.target.value); try { localStorage.setItem("synetia_gemini_key", e.target.value); } catch(ex) {} }} placeholder="AIzaSy..." type="password" style={{ ...IS, width: "100%" }} />
                 </div>
                 <button onClick={improveIdea} disabled={isImprovingIdea || !rawIdea.trim()} style={{ ...BS, background: isImprovingIdea || !rawIdea.trim() ? C.bgHover : C.blue, color: isImprovingIdea || !rawIdea.trim() ? C.textLight : "#fff", border: "none", padding: "10px 20px", fontWeight: "600", whiteSpace: "nowrap" }}>
                   {isImprovingIdea ? "Mejorando..." : "⚡ Mejorar con IA"}
