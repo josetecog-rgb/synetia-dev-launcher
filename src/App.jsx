@@ -337,12 +337,24 @@ export default function DevLauncher() {
         ? "Analiza el siguiente contenido de la página web y extrae su ESTILO VISUAL.\n\nURL: " + cleanUrl + "\n\nCONTENIDO EXTRAÍDO:\n" + pageContent
         : "Analiza el estilo visual de esta página web basándote en tu conocimiento de ella (o inferido por el dominio/nombre).\n\nURL: " + inspireUrl.trim() + "\n\nNota: No se pudo leer el contenido directamente, usa tu conocimiento sobre el sitio web o el tipo de empresa que sugiere el dominio.";
 
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key, {
+      // Intentar que Gemini lea la URL directamente (capacidad nativa de Gemini 2.5 Pro)
+      let geminiContents;
+      if (readSuccess) {
+        // Si Jina funcionó, usar el contenido extraído
+        geminiContents = [{ parts: [{ text: promptText + "\n\nExtrae EXACTAMENTE esto en texto plano SIN asteriscos ni markdown:\n\n1. PALETA DE COLORES: colores principales con hex aproximados\n2. TIPOGRAFIA: tipo de fuente y pesos\n3. LAYOUT: estructura de la página\n4. EFECTOS VISUALES: animaciones, sombras, gradientes, 3D\n5. COMPONENTES DESTACADOS: cards, botones, navegación\n6. TONO: formal/casual/técnico/lujoso\n7. COMO REPLICAR: 3 instrucciones concretas para reproducir este estilo\n\nSin asteriscos. Sin markdown. Texto plano. Completa TODOS los puntos." }] }];
+      } else {
+        // Si Jina falló, dar la URL a Gemini para que la analice directamente
+        geminiContents = [{ parts: [
+          { text: "Visita y analiza visualmente esta página web: " + inspireUrl.trim() + "\n\nExtrae EXACTAMENTE esto en texto plano SIN asteriscos ni markdown:\n\n1. PALETA DE COLORES: colores principales con hex aproximados\n2. TIPOGRAFIA: tipo de fuente y pesos\n3. LAYOUT: estructura de la página (hero, grid, sidebar, etc)\n4. EFECTOS VISUALES: animaciones, sombras, gradientes, glassmorphism, 3D\n5. COMPONENTES DESTACADOS: tarjetas, botones, navegación\n6. TONO: formal/casual/técnico/lujoso/vibrante\n7. COMO REPLICAR: 3 instrucciones concretas para reproducir este estilo en otro proyecto web\n\nSin asteriscos. Sin markdown. Texto plano. Completa TODOS los puntos sin cortar." }
+        ]}];
+      }
+
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" + key, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText + "\n\nExtrae EXACTAMENTE esto en formato de lista numerada SIN markdown ni asteriscos:\n\n1. PALETA DE COLORES: colores principales y hex aproximados\n2. TIPOGRAFIA: fuentes y pesos (sans-serif moderna, serif elegante, etc)\n3. LAYOUT: estructura (hero full-width, grid 3col, sidebar, etc)\n4. EFECTOS VISUALES: animaciones, sombras, gradientes, glassmorphism, 3D\n5. COMPONENTES: tarjetas, botones, navegación, hero\n6. TONO: formal/casual/técnico/lujoso/vibrante\n7. COMO REPLICAR: instrucciones concretas en 2-3 líneas para reproducir este estilo en otra web\n\nResponde sin asteriscos, sin markdown, texto plano organizado. Máximo 250 palabras." }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1000 }
+          contents: geminiContents,
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
         })
       });
       const data = await res.json();
@@ -740,7 +752,7 @@ export default function DevLauncher() {
                     <div style={{ color: C.purple, fontWeight: "700", fontSize: "11px" }}>✓ ESTILO DETECTADO — se usará en tu prompt</div>
                     <button onClick={() => setUrlAnalysis("")} style={{ ...BS, fontSize: "10px", background: "transparent", color: C.textLight, border: "1px solid " + C.border }}>✕ Quitar</button>
                   </div>
-                  <div style={{ color: C.textMid, fontSize: "11px", lineHeight: "1.7", whiteSpace: "pre-wrap" }}>{urlAnalysis}</div>
+                  <div style={{ color: C.textMid, fontSize: "11px", lineHeight: "1.8", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "320px", overflowY: "auto", background: "#fff", padding: "10px", borderRadius: "6px", border: "1px solid " + C.border }}>{urlAnalysis}</div>
                 </div>
               )}
             </div>
