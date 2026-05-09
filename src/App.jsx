@@ -233,6 +233,18 @@ export default function DevLauncher() {
   const [templateCat, setTemplateCat] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showDesignTools, setShowDesignTools] = useState(false);
+  // Logo & Slogan
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
+  const [logoBase64, setLogoBase64] = useState("");
+  const [slogan, setSlogan] = useState(() => { try { return localStorage.getItem("synetia_slogan") || ""; } catch(e) { return ""; } });
+  const [brandColors, setBrandColors] = useState("");
+  const [isAnalyzingLogo, setIsAnalyzingLogo] = useState(false);
+  const [logoAnalysis, setLogoAnalysis] = useState(() => { try { return localStorage.getItem("synetia_logo_analysis") || ""; } catch(e) { return ""; } });
+  // Clonar estilo desde URL
+  const [inspireUrl, setInspireUrl] = useState("");
+  const [isAnalyzingUrl, setIsAnalyzingUrl] = useState(false);
+  const [urlAnalysis, setUrlAnalysis] = useState("");
 
   const allEnvs = [...ENVIRONMENTS, ...customEnvs];
   const allApis = [...AI_APIS, ...customApis];
@@ -251,6 +263,65 @@ export default function DevLauncher() {
     return base;
   })();
   const suggestedMcps = projectType ? (PROJECT_TYPES.find(p => p.id === projectType)?.mcps || []) : [];
+
+  // Analizar logo con Gemini Vision
+  async function analyzeLogo() {
+    if (!logoBase64) return;
+    setIsAnalyzingLogo(true);
+    try {
+      const key = ideaApiKey || "";
+      if (!key) { alert("Necesitas tu Gemini API key para analizar el logo"); setIsAnalyzingLogo(false); return; }
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { inline_data: { mime_type: "image/png", data: logoBase64 } },
+            { text: "Analiza este logo de empresa y extrae:\n1. COLORES PRINCIPALES: lista los colores hex aproximados\n2. ESTILO VISUAL: describe el estilo (moderno/clásico/minimalista/bold/etc)\n3. TIPOGRAFÍA: tipo de letra si es visible (serif/sans-serif/script/etc)\n4. SENSACIÓN: qué transmite (confianza/lujo/tecnología/salud/etc)\n5. RECOMENDACIONES: cómo mantener la identidad visual en una web/app\n\nSé específico y conciso. Máximo 150 palabras." }
+          ]}],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 500 }
+        })
+      });
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo analizar el logo.";
+      setLogoAnalysis(text);
+      try { localStorage.setItem("synetia_logo_analysis", text); } catch(e) {}
+    } catch(e) { setLogoAnalysis("Error al analizar. Verifica tu API key."); }
+    setIsAnalyzingLogo(false);
+  }
+
+  // Analizar URL de inspiración con Jina Reader + Gemini
+  async function analyzeUrl() {
+    if (!inspireUrl.trim()) return;
+    setIsAnalyzingUrl(true);
+    try {
+      const key = ideaApiKey || "";
+      if (!key) { alert("Necesitas tu Gemini API key para analizar la URL"); setIsAnalyzingUrl(false); return; }
+      // Jina Reader convierte cualquier URL en texto analizable (gratis, sin API key)
+      const jinaUrl = "https://r.jina.ai/" + inspireUrl.trim();
+      let pageContent = "";
+      try {
+        const jinaRes = await fetch(jinaUrl, { headers: { "Accept": "text/plain" } });
+        pageContent = await jinaRes.text();
+        pageContent = pageContent.substring(0, 4000); // Limitar para no exceder contexto
+      } catch(e) {
+        pageContent = "No se pudo leer la página. Analiza basándote en la URL: " + inspireUrl;
+      }
+      // Gemini analiza el contenido
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Analiza el siguiente contenido de una página web y extrae su ESTILO VISUAL para replicarlo en otro proyecto.\n\nURL: " + inspireUrl + "\n\nCONTENIDO:\n" + pageContent + "\n\nExtrae:\n1. PALETA DE COLORES: colores principales y de acento\n2. TIPOGRAFÍA: familias y pesos usados\n3. LAYOUT: estructura general (hero, secciones, grid)\n4. EFECTOS VISUALES: animaciones, sombras, gradientes, 3D\n5. COMPONENTES CLAVE: qué elementos destacan (cards, botones, nav)\n6. TONO: formal/casual/técnico/emocional\n7. PROMPT DE ESTILO: en 3 líneas, cómo replicar este estilo en otro proyecto\n\nSé específico. Máximo 200 palabras." }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 800 }
+        })
+      });
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo analizar la URL.";
+      setUrlAnalysis(text);
+    } catch(e) { setUrlAnalysis("Error al analizar la URL."); }
+    setIsAnalyzingUrl(false);
+  }
 
   async function improveIdea() {
     if (!rawIdea.trim()) return;
@@ -540,6 +611,104 @@ export default function DevLauncher() {
                   <div style={{ color: C.textLight, fontSize: "11px", marginTop: "2px" }}>{v}</div>
                 </div>
               ))}
+            </div>
+
+            {/* ── LOGO & SLOGAN ── */}
+            <div style={{ background: C.bgCard, border: "1px solid " + C.border, borderRadius: "12px", padding: "16px", marginBottom: "16px", boxShadow: C.shadow }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                <div style={{ width: "28px", height: "28px", background: C.coral + "1A", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>🏷️</div>
+                <div>
+                  <div style={{ fontWeight: "700", fontSize: "13px", color: C.text }}>Logo & Slogan de tu empresa</div>
+                  <div style={{ color: C.textLight, fontSize: "11px" }}>La IA mantendrá tu identidad visual en el proyecto</div>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "16px", alignItems: "start" }}>
+                {/* Upload logo */}
+                <div>
+                  <div style={{ width: "100px", height: "100px", border: "2px dashed " + C.border, borderRadius: "10px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", background: logoPreview ? "#fff" : C.bgHover, overflow: "hidden", position: "relative" }}
+                    onClick={() => document.getElementById("logo-upload").click()}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                  >
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "8px" }} />
+                    ) : (
+                      <>
+                        <div style={{ fontSize: "24px", marginBottom: "4px" }}>🖼️</div>
+                        <div style={{ fontSize: "10px", color: C.textLight, textAlign: "center", lineHeight: "1.3" }}>Click para subir logo</div>
+                      </>
+                    )}
+                  </div>
+                  <input id="logo-upload" type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    setLogoFile(file);
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                      const result = ev.target.result;
+                      setLogoPreview(result);
+                      // Extraer base64 sin el prefijo data:image/...;base64,
+                      setLogoBase64(result.split(",")[1] || "");
+                    };
+                    reader.readAsDataURL(file);
+                  }} />
+                  {logoPreview && (
+                    <button onClick={() => { setLogoFile(null); setLogoPreview(""); setLogoBase64(""); setLogoAnalysis(""); }} style={{ ...BS, marginTop: "4px", fontSize: "10px", background: C.bgHover, color: C.textLight, width: "100px" }}>
+                      Quitar
+                    </button>
+                  )}
+                </div>
+                {/* Slogan y colores */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div>
+                    <Lbl>SLOGAN O TAGLINE</Lbl>
+                    <input value={slogan} onChange={e => { setSlogan(e.target.value); try { localStorage.setItem("synetia_slogan", e.target.value); } catch(ex) {} }} placeholder={"Ej: Creamos Activos Digitales"} style={{ ...IS, width: "100%" }} />
+                  </div>
+                  <div>
+                    <Lbl>COLORES DE MARCA (opcional, si los conoces)</Lbl>
+                    <input value={brandColors} onChange={e => setBrandColors(e.target.value)} placeholder={"Ej: Azul #0F3F7A, Verde #4C9F38"} style={{ ...IS, width: "100%" }} />
+                  </div>
+                  {logoBase64 && !logoAnalysis && (
+                    <button onClick={analyzeLogo} disabled={isAnalyzingLogo || !ideaApiKey} style={{ ...BS, background: isAnalyzingLogo ? C.bgHover : C.coral, color: isAnalyzingLogo ? C.textLight : "#fff", border: "none", fontWeight: "600", fontSize: "12px" }}>
+                      {isAnalyzingLogo ? "Analizando logo..." : "🔍 Analizar logo con IA"}
+                    </button>
+                  )}
+                  {logoAnalysis && (
+                    <div style={{ background: C.coralLight, border: "1px solid " + C.coral + "44", borderRadius: "8px", padding: "10px 12px" }}>
+                      <div style={{ color: C.coral, fontWeight: "700", fontSize: "11px", marginBottom: "4px" }}>✓ ANÁLISIS DE IDENTIDAD VISUAL</div>
+                      <div style={{ color: C.textMid, fontSize: "11px", lineHeight: "1.7", whiteSpace: "pre-wrap" }}>{logoAnalysis}</div>
+                      <button onClick={() => { setLogoAnalysis(""); try { localStorage.removeItem("synetia_logo_analysis"); } catch(e) {} }} style={{ ...BS, marginTop: "6px", fontSize: "10px", background: "transparent", color: C.coral, border: "1px solid " + C.coral + "44" }}>Reanálizar</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── URL DE INSPIRACIÓN ── */}
+            <div style={{ background: C.bgCard, border: "1px solid " + C.border, borderRadius: "12px", padding: "16px", marginBottom: "16px", boxShadow: C.shadow }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                <div style={{ width: "28px", height: "28px", background: C.purple + "1A", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>🌐</div>
+                <div>
+                  <div style={{ fontWeight: "700", fontSize: "13px", color: C.text }}>Clonar estilo desde URL</div>
+                  <div style={{ color: C.textLight, fontSize: "11px" }}>Pega la URL de una página que te guste — la IA extrae su estilo y lo adapta a tu proyecto</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input value={inspireUrl} onChange={e => setInspireUrl(e.target.value)} placeholder={"Ej: https://stripe.com o https://linear.app"} style={{ ...IS, flex: 1 }} onKeyDown={e => e.key === "Enter" && analyzeUrl()} />
+                <button onClick={analyzeUrl} disabled={isAnalyzingUrl || !inspireUrl.trim() || !ideaApiKey} style={{ ...BS, background: isAnalyzingUrl || !inspireUrl.trim() ? C.bgHover : C.purple, color: isAnalyzingUrl || !inspireUrl.trim() ? C.textLight : "#fff", border: "none", fontWeight: "600", whiteSpace: "nowrap" }}>
+                  {isAnalyzingUrl ? "Analizando..." : "⚡ Analizar estilo"}
+                </button>
+              </div>
+              {!ideaApiKey && <div style={{ color: C.textLight, fontSize: "10px", marginTop: "6px" }}>⚠️ Necesitas tu Gemini API key (más abajo) para usar esta función</div>}
+              {urlAnalysis && (
+                <div style={{ marginTop: "12px", background: C.purple + "0A", border: "1px solid " + C.purple + "33", borderRadius: "8px", padding: "12px 14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <div style={{ color: C.purple, fontWeight: "700", fontSize: "11px" }}>✓ ESTILO DETECTADO — se usará en tu prompt</div>
+                    <button onClick={() => setUrlAnalysis("")} style={{ ...BS, fontSize: "10px", background: "transparent", color: C.textLight, border: "1px solid " + C.border }}>✕ Quitar</button>
+                  </div>
+                  <div style={{ color: C.textMid, fontSize: "11px", lineHeight: "1.7", whiteSpace: "pre-wrap" }}>{urlAnalysis}</div>
+                </div>
+              )}
             </div>
 
             <div>
