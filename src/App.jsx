@@ -294,32 +294,66 @@ export default function DevLauncher() {
   async function analyzeUrl() {
     if (!inspireUrl.trim()) return;
     setIsAnalyzingUrl(true);
+    setUrlAnalysis("");
     try {
       const key = ideaApiKey || "";
-      if (!key) { alert("Necesitas tu Gemini API key para analizar la URL"); setIsAnalyzingUrl(false); return; }
-      // Jina Reader convierte cualquier URL en texto analizable (gratis, sin API key)
-      const jinaUrl = "https://r.jina.ai/" + inspireUrl.trim();
-      let pageContent = "";
+      if (!key) { alert("Necesitas tu Gemini API key (campo más abajo)"); setIsAnalyzingUrl(false); return; }
+
+      // Limpiar URL — quitar parámetros de tracking que bloquean Jina
+      let cleanUrl = inspireUrl.trim();
       try {
-        const jinaRes = await fetch(jinaUrl, { headers: { "Accept": "text/plain" } });
-        pageContent = await jinaRes.text();
-        pageContent = pageContent.substring(0, 4000); // Limitar para no exceder contexto
-      } catch(e) {
-        pageContent = "No se pudo leer la página. Analiza basándote en la URL: " + inspireUrl;
+        const urlObj = new URL(cleanUrl);
+        // Quitar params de Google Ads, UTM y tracking
+        ["gad_source","gad_campaignid","gclid","utm_source","utm_medium","utm_campaign","utm_term","fbclid","msclkid"].forEach(p => urlObj.searchParams.delete(p));
+        cleanUrl = urlObj.origin + urlObj.pathname;
+      } catch(e) { /* URL inválida, usar como está */ }
+
+      // Intentar con Jina Reader (proxy gratuito)
+      let pageContent = "";
+      let readSuccess = false;
+      const jinaVariants = [
+        "https://r.jina.ai/" + cleanUrl,
+        "https://r.jina.ai/" + inspireUrl.trim(),
+      ];
+      for (const jinaUrl of jinaVariants) {
+        try {
+          const jinaRes = await fetch(jinaUrl, {
+            headers: { "Accept": "text/plain", "X-Return-Format": "text" },
+            signal: AbortSignal.timeout(10000)
+          });
+          if (jinaRes.ok) {
+            const raw = await jinaRes.text();
+            if (raw && raw.length > 200) {
+              pageContent = raw.substring(0, 5000);
+              readSuccess = true;
+              break;
+            }
+          }
+        } catch(e) { /* intentar siguiente variante */ }
       }
-      // Gemini analiza el contenido
+
+      // Si Jina falló, pedirle a Gemini que analice solo con la URL (conocimiento propio)
+      const promptText = readSuccess
+        ? "Analiza el siguiente contenido de la página web y extrae su ESTILO VISUAL.\n\nURL: " + cleanUrl + "\n\nCONTENIDO EXTRAÍDO:\n" + pageContent
+        : "Analiza el estilo visual de esta página web basándote en tu conocimiento de ella (o inferido por el dominio/nombre).\n\nURL: " + inspireUrl.trim() + "\n\nNota: No se pudo leer el contenido directamente, usa tu conocimiento sobre el sitio web o el tipo de empresa que sugiere el dominio.";
+
       const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: "Analiza el siguiente contenido de una página web y extrae su ESTILO VISUAL para replicarlo en otro proyecto.\n\nURL: " + inspireUrl + "\n\nCONTENIDO:\n" + pageContent + "\n\nExtrae:\n1. PALETA DE COLORES: colores principales y de acento\n2. TIPOGRAFÍA: familias y pesos usados\n3. LAYOUT: estructura general (hero, secciones, grid)\n4. EFECTOS VISUALES: animaciones, sombras, gradientes, 3D\n5. COMPONENTES CLAVE: qué elementos destacan (cards, botones, nav)\n6. TONO: formal/casual/técnico/emocional\n7. PROMPT DE ESTILO: en 3 líneas, cómo replicar este estilo en otro proyecto\n\nSé específico. Máximo 200 palabras." }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 800 }
+          contents: [{ parts: [{ text: promptText + "\n\nExtrae EXACTAMENTE esto en formato de lista numerada SIN markdown ni asteriscos:\n\n1. PALETA DE COLORES: colores principales y hex aproximados\n2. TIPOGRAFIA: fuentes y pesos (sans-serif moderna, serif elegante, etc)\n3. LAYOUT: estructura (hero full-width, grid 3col, sidebar, etc)\n4. EFECTOS VISUALES: animaciones, sombras, gradientes, glassmorphism, 3D\n5. COMPONENTES: tarjetas, botones, navegación, hero\n6. TONO: formal/casual/técnico/lujoso/vibrante\n7. COMO REPLICAR: instrucciones concretas en 2-3 líneas para reproducir este estilo en otra web\n\nResponde sin asteriscos, sin markdown, texto plano organizado. Máximo 250 palabras." }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1000 }
         })
       });
       const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo analizar la URL.";
-      setUrlAnalysis(text);
-    } catch(e) { setUrlAnalysis("Error al analizar la URL."); }
+      if (data.error) { setUrlAnalysis("Error API: " + (data.error.message || "Verifica tu API key")); setIsAnalyzingUrl(false); return; }
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo analizar.";
+      // Limpiar markdown residual
+      const clean = text.replace(/\*\*/g, "").replace(/\*/g, "-").replace(/#{1,6} /g, "").trim();
+      setUrlAnalysis((readSuccess ? "" : "⚠️ No se pudo leer la página directamente — análisis basado en conocimiento del sitio:\n\n") + clean);
+    } catch(e) {
+      setUrlAnalysis("Error de conexión. Verifica tu internet y API key de Gemini.");
+    }
     setIsAnalyzingUrl(false);
   }
 
