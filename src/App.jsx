@@ -1,5 +1,109 @@
 import { useState } from "react";
 
+// ── PROVEEDORES DE IA PARA ANÁLISIS ──
+const AI_PROVIDERS = [
+  {
+    id: "gemini",
+    name: "Gemini 2.5 Flash",
+    badge: "GRATIS",
+    badgeColor: "#10B981",
+    icon: "G",
+    iconBg: "#4285F4",
+    description: "Google AI Studio — gratis sin tarjeta",
+    keyPlaceholder: "AIzaSy... (aistudio.google.com)",
+    keyStorage: "synetia_gemini_key",
+    keyLink: "https://aistudio.google.com/apikey",
+    model: "gemini-2.5-flash",
+    endpoint: (key) => "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key,
+    buildBody: (prompt) => JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 2048 } }),
+    parseResponse: (data) => data?.candidates?.[0]?.content?.parts?.[0]?.text || "",
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter (DeepSeek V3)",
+    badge: "GRATIS",
+    badgeColor: "#10B981",
+    icon: "OR",
+    iconBg: "#6366F1",
+    description: "Una key, 29+ modelos gratis — openrouter.ai",
+    keyPlaceholder: "sk-or-v1-... (openrouter.ai/keys)",
+    keyStorage: "synetia_openrouter_key",
+    keyLink: "https://openrouter.ai/keys",
+    model: "deepseek/deepseek-v3:free",
+    endpoint: () => "https://openrouter.ai/api/v1/chat/completions",
+    buildBody: (prompt, model) => JSON.stringify({ model: model || "deepseek/deepseek-v3:free", messages: [{ role: "user", content: prompt }], max_tokens: 2048, temperature: 0.2 }),
+    parseResponse: (data) => data?.choices?.[0]?.message?.content || "",
+    headers: (key) => ({ "Content-Type": "application/json", "Authorization": "Bearer " + key, "HTTP-Referer": "https://synetia-dev-launcher.vercel.app", "X-Title": "SynetIA Dev Launcher" }),
+  },
+  {
+    id: "groq",
+    name: "Groq (Llama 3.3 70B)",
+    badge: "GRATIS",
+    badgeColor: "#10B981",
+    icon: "GQ",
+    iconBg: "#F97316",
+    description: "Velocidad extrema — console.groq.com",
+    keyPlaceholder: "gsk_... (console.groq.com/keys)",
+    keyStorage: "synetia_groq_key",
+    keyLink: "https://console.groq.com/keys",
+    model: "llama-3.3-70b-versatile",
+    endpoint: () => "https://api.groq.com/openai/v1/chat/completions",
+    buildBody: (prompt, model) => JSON.stringify({ model: model || "llama-3.3-70b-versatile", messages: [{ role: "user", content: prompt }], max_tokens: 2048, temperature: 0.2 }),
+    parseResponse: (data) => data?.choices?.[0]?.message?.content || "",
+    headers: (key) => ({ "Content-Type": "application/json", "Authorization": "Bearer " + key }),
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek V4-Flash",
+    badge: "CASI GRATIS",
+    badgeColor: "#F59E0B",
+    icon: "DS",
+    iconBg: "#4D6BFE",
+    description: "$0.14/M tokens — platform.deepseek.com",
+    keyPlaceholder: "sk-... (platform.deepseek.com)",
+    keyStorage: "synetia_deepseek_key",
+    keyLink: "https://platform.deepseek.com/api_keys",
+    model: "deepseek-v4-flash",
+    endpoint: () => "https://api.deepseek.com/chat/completions",
+    buildBody: (prompt, model) => JSON.stringify({ model: model || "deepseek-v4-flash", messages: [{ role: "user", content: prompt }], max_tokens: 2048, temperature: 0.2 }),
+    parseResponse: (data) => data?.choices?.[0]?.message?.content || "",
+    headers: (key) => ({ "Content-Type": "application/json", "Authorization": "Bearer " + key }),
+  },
+  {
+    id: "cerebras",
+    name: "Cerebras (Llama 3.3 70B)",
+    badge: "GRATIS",
+    badgeColor: "#10B981",
+    icon: "CB",
+    iconBg: "#EC4899",
+    description: "1M tokens/día gratis — cloud.cerebras.ai",
+    keyPlaceholder: "csk-... (cloud.cerebras.ai)",
+    keyStorage: "synetia_cerebras_key",
+    keyLink: "https://cloud.cerebras.ai",
+    model: "llama3.3-70b",
+    endpoint: () => "https://api.cerebras.ai/v1/chat/completions",
+    buildBody: (prompt, model) => JSON.stringify({ model: model || "llama3.3-70b", messages: [{ role: "user", content: prompt }], max_tokens: 2048, temperature: 0.2 }),
+    parseResponse: (data) => data?.choices?.[0]?.message?.content || "",
+    headers: (key) => ({ "Content-Type": "application/json", "Authorization": "Bearer " + key }),
+  },
+];
+
+// Función universal para llamar a cualquier proveedor
+async function callAI(provider, apiKey, prompt) {
+  const isGemini = provider.id === "gemini";
+  const url = isGemini ? provider.endpoint(apiKey) : provider.endpoint();
+  const headers = isGemini
+    ? { "Content-Type": "application/json" }
+    : (provider.headers ? provider.headers(apiKey) : { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey });
+  const body = provider.buildBody(prompt, provider.model);
+  const res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(30000) });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  const text = provider.parseResponse(data);
+  if (!text) throw new Error("Respuesta vacía del proveedor");
+  return text;
+}
+
 const C = {
   bg: "#F8F9FC", bgCard: "#FFFFFF", bgHover: "#F1F4FD", border: "#E2E8F0",
   text: "#1E293B", textMid: "#475569", textLight: "#94A3B8",
@@ -233,6 +337,15 @@ export default function DevLauncher() {
   const [templateCat, setTemplateCat] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showDesignTools, setShowDesignTools] = useState(false);
+  // Selector de proveedor IA
+  const [selectedProvider, setSelectedProvider] = useState(() => { try { return localStorage.getItem("synetia_provider") || "gemini"; } catch(e) { return "gemini"; } });
+  const [providerKeys, setProviderKeys] = useState(() => {
+    const keys = {};
+    try {
+      AI_PROVIDERS.forEach(p => { const k = localStorage.getItem(p.keyStorage); if (k) keys[p.id] = k; });
+    } catch(e) {}
+    return keys;
+  });
   // Logo & Slogan
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
@@ -269,21 +382,25 @@ export default function DevLauncher() {
     if (!logoBase64) return;
     setIsAnalyzingLogo(true);
     try {
-      const key = ideaApiKey || "";
-      if (!key) { alert("Necesitas tu Gemini API key para analizar el logo"); setIsAnalyzingLogo(false); return; }
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key, {
+      const provider = AI_PROVIDERS.find(p => p.id === selectedProvider) || AI_PROVIDERS[0];
+      const key = providerKeys["gemini"] || providerKeys[provider.id] || ideaApiKey || "";
+      if (!key) { alert("Necesitas al menos la API key de Gemini para analizar imágenes (aistudio.google.com)"); setIsAnalyzingLogo(false); return; }
+      // Para el logo siempre usamos Gemini (soporta imágenes)
+      const geminiKey = providerKeys["gemini"] || ideaApiKey || key;
+      const logoRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [
             { inline_data: { mime_type: "image/png", data: logoBase64 } },
-            { text: "Analiza este logo de empresa y extrae:\n1. COLORES PRINCIPALES: lista los colores hex aproximados\n2. ESTILO VISUAL: describe el estilo (moderno/clásico/minimalista/bold/etc)\n3. TIPOGRAFÍA: tipo de letra si es visible (serif/sans-serif/script/etc)\n4. SENSACIÓN: qué transmite (confianza/lujo/tecnología/salud/etc)\n5. RECOMENDACIONES: cómo mantener la identidad visual en una web/app\n\nSé específico y conciso. Máximo 150 palabras." }
+            { text: "Analiza este logo y extrae en texto plano sin asteriscos:\n1. COLORES: colores principales con hex aproximados\n2. ESTILO: moderno/clásico/minimalista/bold\n3. TIPOGRAFIA: serif/sans-serif/script\n4. SENSACION: confianza/lujo/tecnología/salud\n5. RECOMENDACIONES: cómo mantener esta identidad en una web/app\nMáximo 120 palabras. Sin asteriscos ni markdown." }
           ]}],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 500 }
+          generationConfig: { temperature: 0.3, maxOutputTokens: 600 }
         })
       });
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo analizar el logo.";
+      const logoData = await logoRes.json();
+      if (logoData.error) throw new Error(logoData.error.message);
+      const text = logoData?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo analizar el logo.";
       setLogoAnalysis(text);
       try { localStorage.setItem("synetia_logo_analysis", text); } catch(e) {}
     } catch(e) { setLogoAnalysis("Error al analizar. Verifica tu API key."); }
@@ -296,8 +413,9 @@ export default function DevLauncher() {
     setIsAnalyzingUrl(true);
     setUrlAnalysis("");
     try {
-      const key = ideaApiKey || "";
-      if (!key) { alert("Necesitas tu Gemini API key (campo más abajo)"); setIsAnalyzingUrl(false); return; }
+      const provider = AI_PROVIDERS.find(p => p.id === selectedProvider) || AI_PROVIDERS[0];
+      const key = providerKeys[provider.id] || ideaApiKey || "";
+      if (!key) { alert("Necesitas la API key de " + provider.name + ".\nObtén una gratis en: " + provider.keyLink + "\nLuego agrégala en el selector de IA más abajo en la página."); setIsAnalyzingUrl(false); return; }
 
       // Limpiar URL — quitar parámetros de tracking que bloquean Jina
       let cleanUrl = inspireUrl.trim();
@@ -349,17 +467,13 @@ export default function DevLauncher() {
         ]}];
       }
 
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" + key, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: geminiContents,
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
-        })
-      });
-      const data = await res.json();
-      if (data.error) { setUrlAnalysis("Error API: " + (data.error.message || "Verifica tu API key")); setIsAnalyzingUrl(false); return; }
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo analizar.";
+      // Construir el prompt final
+      const finalPrompt = (readSuccess
+        ? "Analiza el contenido de esta página web y extrae su ESTILO VISUAL.\n\nURL: " + cleanUrl + "\n\nCONTENIDO:\n" + pageContent
+        : "Analiza el estilo visual de esta página web basándote en tu conocimiento.\n\nURL: " + inspireUrl.trim()) +
+        "\n\nExtrae en texto plano SIN asteriscos ni markdown:\n\n1. PALETA DE COLORES: colores principales con hex aproximados\n2. TIPOGRAFIA: tipo de fuente y pesos\n3. LAYOUT: estructura de la página\n4. EFECTOS VISUALES: animaciones, sombras, gradientes, 3D\n5. COMPONENTES DESTACADOS: cards, botones, navegación\n6. TONO: formal/casual/técnico/lujoso\n7. COMO REPLICAR: 3 instrucciones concretas para reproducir este estilo\n\nSin asteriscos. Texto plano. Completa TODOS los puntos.";
+
+      const text = await callAI(provider, key, finalPrompt);
       // Limpiar markdown residual
       const clean = text.replace(/\*\*/g, "").replace(/\*/g, "-").replace(/#{1,6} /g, "").trim();
       setUrlAnalysis((readSuccess ? "" : "⚠️ No se pudo leer la página directamente — análisis basado en conocimiento del sitio:\n\n") + clean);
@@ -373,16 +487,19 @@ export default function DevLauncher() {
     if (!rawIdea.trim()) return;
     setIsImprovingIdea(true);
     try {
-      const key = ideaApiKey || apiKeys["gemini"] || "";
-      if (!key) { const m = "⚠️ Necesitas tu API key de Google AI Studio (gratis en aistudio.google.com)"; setImprovedIdea(m); setEditedIdea(m); setIsImprovingIdea(false); return; }
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: "Eres un experto en arquitectura de software y product design. Tu tarea es convertir la idea del usuario en un prompt de especificación COMPLETO y DETALLADO para un agente IA coding. El prompt debe ser tan claro que el agente pueda construir el proyecto SIN hacer ninguna pregunta.\n\nDATA DEL PROYECTO:\n- Nombre: " + (projectName || "Sin nombre") + "\n- Tipo: " + (PROJECT_TYPES.find(p => p.id === projectType)?.label || "General") + "\n- Entorno: " + (env?.name || "No seleccionado") + "\n- Plantilla base: " + (selectedTemplate?.name || "Ninguna") + "\n\nIDEA DEL USUARIO:\n" + rawIdea + "\n\nGenera el prompt con TODAS estas secciones completas:\n1. DESCRIPCION DEL PROYECTO (qué es, para quién, problema que resuelve)\n2. STACK TECNOLOGICO (lenguajes, frameworks, librerías exactas)\n3. ESTRUCTURA DE ARCHIVOS (lista de archivos a crear)\n4. SECCIONES / PANTALLAS (descripción detallada de cada una)\n5. ESTÉTICA Y DISEÑO (colores exactos, tipografías, efectos visuales)\n6. FUNCIONALIDADES (lista completa)\n7. LO QUE NO DEBE HACER (límites del MVP)\n8. INSTRUCCIONES FINALES (cómo debe trabajar la IA)\n\nIMPORTANTE: Responde ÚNICAMENTE con el prompt completo, sin introducción ni explicaciones previas. Empieza directamente con el prompt. No uses markdown, solo texto plano organizado en secciones." }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } })
-      });
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Error al procesar.";
+      const provider = AI_PROVIDERS.find(p => p.id === selectedProvider) || AI_PROVIDERS[0];
+      const key = providerKeys[provider.id] || ideaApiKey || "";
+      if (!key) {
+        const m = "⚠️ Necesitas la API key de " + provider.name + ". Agrégala en el selector de proveedor IA.";
+        setImprovedIdea(m); setEditedIdea(m); setIsImprovingIdea(false); return;
+      }
+      const prompt = "Eres un experto en arquitectura de software y product design. Convierte la idea del usuario en un prompt de especificación COMPLETO para un agente IA coding.\n\nDATA DEL PROYECTO:\n- Nombre: " + (projectName || "Sin nombre") + "\n- Tipo: " + (PROJECT_TYPES.find(p => p.id === projectType)?.label || "General") + "\n- Entorno: " + (env?.name || "No seleccionado") + "\n- Plantilla: " + (selectedTemplate?.name || "Ninguna") + (slogan ? "\n- Slogan: " + slogan : "") + (logoAnalysis ? "\n- LOGO (identidad visual): " + logoAnalysis : "") + (brandColors ? "\n- Colores marca: " + brandColors : "") + (urlAnalysis ? "\n- ESTILO DE REFERENCIA: " + urlAnalysis : "") + "\n\nIDEA DEL USUARIO:\n" + rawIdea + "\n\nGenera el prompt con TODAS estas secciones:\n1. DESCRIPCION DEL PROYECTO\n2. STACK TECNOLOGICO\n3. ESTRUCTURA DE ARCHIVOS\n4. SECCIONES / PANTALLAS\n5. ESTÉTICA Y DISEÑO (colores exactos, tipografías, efectos)\n6. FUNCIONALIDADES\n7. LO QUE NO DEBE HACER\n8. INSTRUCCIONES FINALES\n\nResponde SOLO el prompt, sin introducción. Texto plano organizado en secciones.";
+      const text = await callAI(provider, key, prompt);
       setImprovedIdea(text); setEditedIdea(text);
-    } catch (e) { const m = "Error al conectar con Gemini. Verifica tu API key."; setImprovedIdea(m); setEditedIdea(m); }
+    } catch (e) {
+      const m = "Error: " + (e.message || "Verifica tu API key y conexión.");
+      setImprovedIdea(m); setEditedIdea(m);
+    }
     setIsImprovingIdea(false);
   }
 
@@ -742,7 +859,7 @@ export default function DevLauncher() {
               <div style={{ display: "flex", gap: "8px" }}>
                 <input value={inspireUrl} onChange={e => setInspireUrl(e.target.value)} placeholder={"Ej: https://stripe.com o https://linear.app"} style={{ ...IS, flex: 1 }} onKeyDown={e => e.key === "Enter" && analyzeUrl()} />
                 <button onClick={analyzeUrl} disabled={isAnalyzingUrl || !inspireUrl.trim() || !ideaApiKey} style={{ ...BS, background: isAnalyzingUrl || !inspireUrl.trim() ? C.bgHover : C.purple, color: isAnalyzingUrl || !inspireUrl.trim() ? C.textLight : "#fff", border: "none", fontWeight: "600", whiteSpace: "nowrap" }}>
-                  {isAnalyzingUrl ? "Analizando..." : "⚡ Analizar estilo"}
+                  {isAnalyzingUrl ? "⏳ Analizando con " + (AI_PROVIDERS.find(p => p.id === selectedProvider)?.name?.split(" ")[0] || "IA") + "..." : "⚡ Analizar estilo"}
                 </button>
               </div>
               {!ideaApiKey && <div style={{ color: C.textLight, fontSize: "10px", marginTop: "6px" }}>⚠️ Necesitas tu Gemini API key (más abajo) para usar esta función</div>}
@@ -760,13 +877,64 @@ export default function DevLauncher() {
             <div>
               <Lbl>TU IDEA — con todo el detalle posible</Lbl>
               <textarea value={rawIdea} onChange={e => setRawIdea(e.target.value)} placeholder={"Describe tu proyecto:\n- ¿Qué es? (landing/app/dashboard/bot)\n- ¿Para quién? (cliente objetivo)\n- ¿Qué secciones/funciones necesita?\n- ¿Qué tecnología? (React, HTML, n8n...)\n- ¿Qué estética? (oscura, moderna, minimalista)\n- ¿Qué NO hacer? (sin backend, solo MVP...)"} style={{ ...IS, width: "100%", minHeight: "140px", resize: "vertical", lineHeight: "1.7" }} />
-              <div style={{ display: "flex", gap: "10px", marginTop: "10px", alignItems: "flex-end" }}>
-                <div style={{ flex: 1 }}>
-                  <Lbl>GEMINI API KEY (gratis en aistudio.google.com)</Lbl>
-                  <input value={ideaApiKey} onChange={e => { setIdeaApiKey(e.target.value); try { localStorage.setItem("synetia_gemini_key", e.target.value); } catch(ex) {} }} placeholder="AIzaSy..." type="password" style={{ ...IS, width: "100%" }} />
+              {/* ── SELECTOR DE PROVEEDOR IA ── */}
+              <div style={{ background: C.bgCard, border: "1px solid " + C.border, borderRadius: "12px", padding: "16px", marginTop: "12px", boxShadow: C.shadow }}>
+                <Lbl>PROVEEDOR DE IA — selecciona y agrega tu API key</Lbl>
+                {/* Tabs de proveedor */}
+                <div style={{ display: "flex", gap: "6px", marginBottom: "14px", flexWrap: "wrap" }}>
+                  {AI_PROVIDERS.map(p => {
+                    const isSelected = selectedProvider === p.id;
+                    const hasKey = !!providerKeys[p.id];
+                    return (
+                      <button key={p.id} onClick={() => { setSelectedProvider(p.id); try { localStorage.setItem("synetia_provider", p.id); } catch(e) {} }} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", background: isSelected ? p.iconBg : C.bgHover, color: isSelected ? "#fff" : C.textMid, border: "2px solid " + (isSelected ? p.iconBg : C.border), borderRadius: "8px", cursor: "pointer", fontSize: "11px", fontWeight: isSelected ? "700" : "400", transition: "all 0.15s", fontFamily: "inherit" }}>
+                        <div style={{ width: "18px", height: "18px", background: isSelected ? "rgba(255,255,255,0.25)" : p.iconBg, borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", color: "#fff", fontWeight: "700" }}>{p.icon}</div>
+                        {p.name.split(" ")[0]}
+                        {hasKey && <span style={{ fontSize: "9px" }}>✓</span>}
+                      </button>
+                    );
+                  })}
                 </div>
-                <button onClick={improveIdea} disabled={isImprovingIdea || !rawIdea.trim()} style={{ ...BS, background: isImprovingIdea || !rawIdea.trim() ? C.bgHover : C.blue, color: isImprovingIdea || !rawIdea.trim() ? C.textLight : "#fff", border: "none", padding: "10px 20px", fontWeight: "600", whiteSpace: "nowrap" }}>
-                  {isImprovingIdea ? "Mejorando..." : "⚡ Mejorar con IA"}
+                {/* Info y key del proveedor seleccionado */}
+                {AI_PROVIDERS.filter(p => p.id === selectedProvider).map(p => (
+                  <div key={p.id}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ width: "24px", height: "24px", background: p.iconBg, borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", color: "#fff", fontWeight: "700" }}>{p.icon}</div>
+                        <div>
+                          <div style={{ fontWeight: "700", fontSize: "12px" }}>{p.name}</div>
+                          <div style={{ color: C.textLight, fontSize: "10px" }}>{p.description}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ background: p.badgeColor + "1A", color: p.badgeColor, border: "1px solid " + p.badgeColor + "44", borderRadius: "4px", padding: "2px 8px", fontSize: "10px", fontWeight: "700" }}>{p.badge}</span>
+                        <a href={p.keyLink} target="_blank" rel="noreferrer" style={{ fontSize: "10px", color: C.blue, textDecoration: "none" }}>Obtener key →</a>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <input
+                        value={providerKeys[p.id] || ""}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setProviderKeys(prev => ({ ...prev, [p.id]: val }));
+                          // También actualizar ideaApiKey si es gemini (compatibilidad)
+                          if (p.id === "gemini") setIdeaApiKey(val);
+                          try { localStorage.setItem(p.keyStorage, val); } catch(ex) {}
+                        }}
+                        placeholder={p.keyPlaceholder}
+                        type="password"
+                        style={{ ...IS, flex: 1 }}
+                      />
+                      {providerKeys[p.id] && (
+                        <div style={{ color: C.green, fontSize: "18px" }}>✓</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
+                <button onClick={improveIdea} disabled={isImprovingIdea || !rawIdea.trim()} style={{ ...BS, background: isImprovingIdea || !rawIdea.trim() ? C.bgHover : C.blue, color: isImprovingIdea || !rawIdea.trim() ? C.textLight : "#fff", border: "none", padding: "12px 28px", fontWeight: "700", fontSize: "13px" }}>
+                  {isImprovingIdea ? "⏳ Mejorando con " + (AI_PROVIDERS.find(p => p.id === selectedProvider)?.name || "IA") + "..." : "⚡ Mejorar idea con IA"}
                 </button>
               </div>
             </div>
